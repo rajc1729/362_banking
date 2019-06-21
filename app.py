@@ -10,6 +10,8 @@ import os
 import time
 import datetime
 from sqlalchemy.ext.declarative import declarative_base
+from flask_admin.contrib.sqla import ModelView
+from flask_admin import Admin
 
 Base = declarative_base()
 app = Flask(__name__)
@@ -23,6 +25,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+admin=Admin(app)
 
 class User(UserMixin, db.Model):
 
@@ -41,6 +44,8 @@ class User(UserMixin, db.Model):
 
     email = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(80))
+
+
 
 class Account(db.Model):
     account_id=db.Column(db.Integer , db.ForeignKey('user.id'), primary_key=True,autoincrement = True)
@@ -87,6 +92,13 @@ class DepositForm(FlaskForm):
     amount_deposit = FloatField('Deposit amount', validators=[InputRequired()])
     deposit=SubmitField("Deposit")
 
+class WithdrawForm(FlaskForm):
+    amount_withdraw = FloatField('Withdraw amount', validators=[InputRequired()])
+    withdraw=SubmitField("Withdraw")
+
+
+
+
 
 @app.route('/')
 def index():
@@ -131,7 +143,8 @@ def signup():
 @login_required
 def dashboard():
     user = User.query.filter_by(username=current_user.username).first()
-    return render_template('dashboard.html', user_name=current_user.username,name=user.name,address=user.address,city=user.city,state=user.state,zipcode=user.zipcode,phone=user.phone_number )
+    account = Account.query.filter_by(account_id=user.id).first()
+    return render_template('dashboard.html', user_name=current_user.username,name=user.name,address=user.address,city=user.city,state=user.state,zipcode=user.zipcode,phone=user.phone_number,balance=account.balance )
 
 @app.route('/deposit', methods=['GET', 'POST'])
 @login_required
@@ -153,12 +166,25 @@ def deposit():
     return render_template('deposit.html', form=form )
     #return '<h1> deposit!</h1>'
 
-@app.route('/withdraw')
+@app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
+    form=WithdrawForm()
+    user = User.query.filter_by(username=current_user.username).first()
+    account = Account.query.filter_by(account_id=user.id).first()
+    if form.validate_on_submit():
+        if (form.amount_withdraw.data)<=account.balance:
+            new_transaction=Transaction(account_id=user.id, amount=(-(form.amount_withdraw.data)), balance=float((account.balance)-form.amount_withdraw.data) , time=datetime.datetime.now(), type="Withdraw")
+            account.balance=((account.balance)-form.amount_withdraw.data)
 
-    #return render_template('withdraw.html',  )
-    return '<h1> withdraw!</h1>'
+            db.session.add(new_transaction)
+            db.session.commit()
+            return '<h1>New withdraw made!</h1>'
+        else:
+            return '<h1>Insufficient balance!</h1>'
+
+    return render_template('withdraw.html', form=form )
+    #return '<h1> withdraw!</h1>'
 
 @app.route('/transfer')
 @login_required
