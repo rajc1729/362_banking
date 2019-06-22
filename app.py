@@ -148,7 +148,8 @@ def signup():
 def dashboard():
     user = User.query.filter_by(username=current_user.username).first()
     account = Account.query.filter_by(account_id=user.id).first()
-    return render_template('dashboard.html', user_name=current_user.username,name=user.name,address=user.address,city=user.city,state=user.state,zipcode=user.zipcode,phone=user.phone_number,balance=account.balance )
+    all_transactions= Transaction.query.filter_by(account_id=user.id)
+    return render_template('dashboard.html', all_transactions=all_transactions,id=user.id ,user_name=current_user.username,name=user.name,address=user.address,city=user.city,state=user.state,zipcode=user.zipcode,phone=user.phone_number,balance=account.balance )
 
 @app.route('/deposit', methods=['GET', 'POST'])
 @login_required
