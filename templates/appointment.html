@@ -42,24 +42,57 @@ Dashboard
         <div class="col-sm-3 col-md-2 sidebar">
           <ul class="nav nav-sidebar">
             <li ><a href="{{ url_for('dashboard') }}">Overview <span class="sr-only">(current)</span></a></li>
-            <li class="active"><a href="{{ url_for('deposit') }}">Deposit</a></li>
+            <li ><a href="{{ url_for('deposit') }}">Deposit</a></li>
             <li><a href="{{ url_for('withdraw') }}">Withdraw</a></li>
             <li><a href="{{ url_for('transfer') }}">Transfer</a></li>
-            <li><a href="{{ url_for('appointment') }}">Make an appointment</a></li>
+            <li class="active"><a href="{{ url_for('appointment') }}">Make an appointment</a></li>
           </ul>
 
 
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-          <h1 class="page-header">Tell us how much you want to deposit today!</h1>
+          <h1 class="page-header">Let's talk about...</h1>
 
-          <form class="form-signin" method="POST" action="/deposit" >
+          <form class="form-signin" method="POST" action="/appointment" >
             {{ form.hidden_tag() }}
-            {{form.amount_deposit.label}} {{ form.amount_deposit }}
-             <button class="btn btn-lg btn-primary btn-block" type="submit">Deposit</button>
+            {{form.appointment_date.label}} {{ form.appointment_date }}
+            {{form.appointment_time.label}} {{ form.appointment_time }}
+            {{form.appointment_location.label}} {{ form.appointment_location }}
+            {{form.about_what.label}} {{ form.about_what }}
+
+             <button class="btn btn-lg btn-primary btn-block" type="submit">Schedule it!</button>
           </form>
 
+          <h2 class="sub-header">Upcoming appointment</h2>
 
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Appointment date</th>
+                  <th>Appointment time</th>
+                  <th>Appointment Location </th>
+                  <th>About what?</th>
+
+                </tr>
+              </thead>
+              <tbody>
+
+                <tr>
+                  <td>{{all_appointment.appointment_date}}</td>
+                  <td>{{all_appointment.appointment_time}}</td>
+                  <td> {{all_appointment.appointment_location}}</td>
+                  <td>{{all_appointment.about_what}}</td>
+
+                </tr>
+
+
+
+
+
+              </tbody>
+            </table>
+          </div>
 
 
 

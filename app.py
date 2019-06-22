@@ -1,7 +1,8 @@
 from flask import Flask, render_template, redirect, url_for,session
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, DateField,TextAreaField,BooleanField,RadioField,IntegerField,FloatField, SubmitField
+from wtforms import StringField, PasswordField,DateTimeField ,DateField,TextAreaField,BooleanField,RadioField,IntegerField,FloatField, SubmitField
+from wtforms_components import TimeField
 from wtforms.validators import InputRequired, Email, Length
 from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -62,6 +63,15 @@ class Transaction(db.Model):
     time=db.Column(db.DateTime)
     type=db.Column(db.String(30))
 
+class Make_an_appointment(db.Model):
+    appointment_id=db.Column(db.Integer ,primary_key=True, autoincrement = True)
+    appointment_account_id=db.Column(db.Integer,db.ForeignKey('user.id'))
+    appointment_date=db.Column(db.Date)
+    appointment_time=db.Column(db.Time)
+    appointment_location=db.Column(db.String(60))
+    about_what=db.Column(db.String(100))
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -100,6 +110,15 @@ class TransferForm(FlaskForm):
     amount_transfer = FloatField('Transfer amount', validators=[InputRequired()])
     account_number=IntegerField('Account number', validators=[InputRequired()])
     transfer=SubmitField("Transfer")
+
+
+class AppointmentForm(FlaskForm):
+    appointment_date=DateField("Date" ,validators=[InputRequired()], format='%m/%d/%y')
+    appointment_time=TimeField("Time" ,validators=[InputRequired()])
+    appointment_location=StringField('location', validators=[InputRequired(), Length(min=2, max=60)])
+    about_what=StringField('About what', validators=[InputRequired(), Length(min=2, max=100)])
+    schedule=SubmitField("Schedule")
+
 
 
 
@@ -204,8 +223,8 @@ def transfer():
             account_recieve = Account.query.filter_by(account_id=user_recieve.id).first()
             if (form.amount_transfer.data)<=account_sender.balance:
 
-                new_transaction_debit=Transaction(account_id=user_sender.id, amount=(-(form.amount_transfer.data)), balance=float((account_sender.balance)-form.amount_transfer.data) , time=datetime.datetime.now(), type=("transfer to, {}." .format(user_recieve.name)) )
-                new_transaction_credit=Transaction(account_id=user_recieve.id, amount=((form.amount_transfer.data)), balance=float((account_recieve.balance)+form.amount_transfer.data) , time=datetime.datetime.now(), type=("transfer from, {}." .format(user_sender.name))  )
+                new_transaction_debit=Transaction(account_id=user_sender.id, amount=(-(form.amount_transfer.data)), balance=float((account_sender.balance)-form.amount_transfer.data) , time=datetime.datetime.now(), type=("Transfer to, {}." .format(user_recieve.name)) )
+                new_transaction_credit=Transaction(account_id=user_recieve.id, amount=((form.amount_transfer.data)), balance=float((account_recieve.balance)+form.amount_transfer.data) , time=datetime.datetime.now(), type=("Transfer from, {}." .format(user_sender.name))  )
                 account_sender.balance=((account_sender.balance)-form.amount_transfer.data)
                 account_recieve.balance=((account_recieve.balance)+form.amount_transfer.data)
 
@@ -227,12 +246,21 @@ def transfer():
     #return '<h1> transfer!</h1>'
 
 
-@app.route('/appointment')
+@app.route('/appointment', methods=['GET', 'POST'])
 @login_required
 def appointment():
+    form=AppointmentForm()
+    user = User.query.filter_by(username=current_user.username).first()
+    all_appointment= Make_an_appointment.query.filter_by(appointment_account_id=user.id).first()
+    if form.validate_on_submit():
+        new_appointment=Make_an_appointment(appointment_account_id=user.id,appointment_date=form.appointment_date.data,appointment_time=form.appointment_time.data, appointment_location=form.appointment_location.data, about_what=form.about_what.data)
+        db.session.add(new_appointment)
+        db.session.commit()
+        return '<h1>New appointment made!</h1>'
 
-    #return render_template('appointment.html',  )
-    return '<h1> appointment!</h1>'
+
+    return render_template('appointment.html',all_appointment=all_appointment , form=form  )
+    #return '<h1> appointment!</h1>'
 
 
 @app.route('/logout')
