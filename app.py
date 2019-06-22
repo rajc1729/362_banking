@@ -96,6 +96,10 @@ class WithdrawForm(FlaskForm):
     amount_withdraw = FloatField('Withdraw amount', validators=[InputRequired()])
     withdraw=SubmitField("Withdraw")
 
+class TransferForm(FlaskForm):
+    amount_transfer = FloatField('Transfer amount', validators=[InputRequired()])
+    account_number=IntegerField('Account number', validators=[InputRequired()])
+    transfer=SubmitField("Transfer")
 
 
 
@@ -186,12 +190,40 @@ def withdraw():
     return render_template('withdraw.html', form=form )
     #return '<h1> withdraw!</h1>'
 
-@app.route('/transfer')
+@app.route('/transfer', methods=['GET', 'POST'])
 @login_required
 def transfer():
+    form=TransferForm()
+    user_sender = User.query.filter_by(username=current_user.username).first()
+    account_sender = Account.query.filter_by(account_id=user_sender.id).first()
+    if form.validate_on_submit():
+
+        user_recieve = User.query.filter_by(id=form.account_number.data).first()
+        if user_recieve:
+            account_recieve = Account.query.filter_by(account_id=user_recieve.id).first()
+            if (form.amount_transfer.data)<=account_sender.balance:
+
+                new_transaction_debit=Transaction(account_id=user_sender.id, amount=(-(form.amount_transfer.data)), balance=float((account_sender.balance)-form.amount_transfer.data) , time=datetime.datetime.now(), type=("transfer to, {}." .format(user_recieve.name)) )
+                new_transaction_credit=Transaction(account_id=user_recieve.id, amount=((form.amount_transfer.data)), balance=float((account_recieve.balance)+form.amount_transfer.data) , time=datetime.datetime.now(), type=("transfer from, {}." .format(user_sender.name))  )
+                account_sender.balance=((account_sender.balance)-form.amount_transfer.data)
+                account_recieve.balance=((account_recieve.balance)+form.amount_transfer.data)
+
+                db.session.add(new_transaction_debit)
+                db.session.add(new_transaction_credit)
+                db.session.commit()
+                return '<h1>New transfer made!</h1>'
+            else:
+                return '<h1>Insufficient balance!</h1>'
+
+        else:
+            return '<h1>Invalid account number!</h1>'
+
+
+
+    return render_template('transfer.html', form=form )
 
     #return render_template('transfer.html',  )
-    return '<h1> transfer!</h1>'
+    #return '<h1> transfer!</h1>'
 
 
 @app.route('/appointment')
