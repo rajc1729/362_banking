@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for,session
+from flask import Flask, render_template, url_for,session,redirect
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField,DateTimeField ,DateField,TextAreaField,BooleanField,RadioField,IntegerField,FloatField, SubmitField
@@ -13,6 +13,9 @@ import datetime
 from sqlalchemy.ext.declarative import declarative_base
 from flask_admin.contrib.sqla import ModelView
 from flask_admin import Admin
+from flask import g
+
+
 
 Base = declarative_base()
 app = Flask(__name__)
@@ -27,6 +30,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 admin=Admin(app)
+
 
 class User(UserMixin, db.Model):
 
@@ -119,8 +123,16 @@ class AppointmentForm(FlaskForm):
     about_what=StringField('About what', validators=[InputRequired(), Length(min=2, max=100)])
     schedule=SubmitField("Schedule")
 
+class ResetForm(FlaskForm):
+    reset_username = StringField('Enter username', validators=[InputRequired(), Length(min=4, max=15)])
+    next=SubmitField("Next")
 
 
+class SecurityForm(FlaskForm):
+    question_answer=StringField("Security question answer",validators=[InputRequired(), Length(min=4, max=150)])
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New password', validators=[InputRequired(), Length(min=8, max=80)])
 
 
 @app.route('/')
@@ -262,6 +274,50 @@ def appointment():
     return render_template('appointment.html',all_appointment=all_appointment , form=form  )
     #return '<h1> appointment!</h1>'
 
+
+
+
+@app.route('/reset', methods=['GET', 'POST'])
+def reset_password():
+    form=ResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.reset_username.data).first()
+        if user:
+            session['forgot_user_name'] = (form.reset_username.data)
+
+            return redirect(('security_question'))
+        else:
+            return '<h1>Invalid user!</h1>'
+
+    return render_template('reset.html' , form=form   )
+
+@app.route('/security_question', methods=['GET', 'POST'])
+def reset_user_password():
+    form=SecurityForm()
+    forgot_user = session.get('forgot_user_name', None)
+    user = User.query.filter_by(username=forgot_user).first()
+    question_asked=user.security_question
+    if form.validate_on_submit():
+        que_answer=user.security_question_answer
+        if (str(que_answer)==str(form.question_answer.data)):
+            return redirect(url_for('reset_link'))
+        else:
+            return "<h1>Invalid answer!</h1>"
+
+    return render_template('security_question.html' , question_asked=question_asked,form=form   )
+
+@app.route('/reset_link', methods=['GET', 'POST'])
+def reset_link():
+    form=ResetPasswordForm()
+    forgot_user = session.get('forgot_user_name', None)
+    user = User.query.filter_by(username=forgot_user).first()
+    if form.validate_on_submit():
+        hashed_password = generate_password_hash(form.password.data, method='sha256')
+        user.password=hashed_password
+        db.session.commit()
+        return "<h1>Password changed!</h1>"
+
+    return render_template('reset_link.html' , form=form   )
 
 @app.route('/logout')
 @login_required
